@@ -4,7 +4,7 @@
  * Handles authentication and communication with the control plane.
  */
 
-import { generateInternalToken } from "@open-inspect/shared";
+import { generateInternalToken } from "@codinspect/shared";
 
 /**
  * Get the control plane URL from environment.

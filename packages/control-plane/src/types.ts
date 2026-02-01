@@ -1,5 +1,5 @@
 /**
- * Type definitions for Open-Inspect Control Plane.
+ * Type definitions for CodInspect Control Plane.
  */
 
 // Environment bindings

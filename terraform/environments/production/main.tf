@@ -1,7 +1,7 @@
 # =============================================================================
-# Open-Inspect - Production Environment
+# CodInspect - Production Environment
 # =============================================================================
-# This configuration deploys the complete Open-Inspect infrastructure:
+# This configuration deploys the complete CodInspect infrastructure:
 # - Cloudflare Workers (control-plane, slack-bot)
 # - Cloudflare KV Namespaces
 # - Vercel Web App
@@ -12,9 +12,9 @@ locals {
   name_suffix = var.deployment_name
 
   # URLs for cross-service configuration
-  control_plane_host = "open-inspect-control-plane-${local.name_suffix}.${var.cloudflare_worker_subdomain}.workers.dev"
+  control_plane_host = "CodInspect-control-plane-${local.name_suffix}.${var.cloudflare_worker_subdomain}.workers.dev"
   control_plane_url  = "https://${local.control_plane_host}"
-  web_app_url        = "https://open-inspect-${local.name_suffix}.vercel.app"
+  web_app_url        = "https://CodInspect-${local.name_suffix}.vercel.app"
   ws_url             = "wss://${local.control_plane_host}"
 
   # Worker script paths (deterministic output locations)
@@ -30,14 +30,14 @@ module "session_index_kv" {
   source = "../../modules/cloudflare-kv"
 
   account_id     = var.cloudflare_account_id
-  namespace_name = "open-inspect-session-index-${local.name_suffix}"
+  namespace_name = "CodInspect-session-index-${local.name_suffix}"
 }
 
 module "slack_kv" {
   source = "../../modules/cloudflare-kv"
 
   account_id     = var.cloudflare_account_id
-  namespace_name = "open-inspect-slack-kv-${local.name_suffix}"
+  namespace_name = "CodInspect-slack-kv-${local.name_suffix}"
 }
 
 # =============================================================================
@@ -62,7 +62,7 @@ module "control_plane_worker" {
   source = "../../modules/cloudflare-worker"
 
   account_id  = var.cloudflare_account_id
-  worker_name = "open-inspect-control-plane-${local.name_suffix}"
+  worker_name = "CodInspect-control-plane-${local.name_suffix}"
   script_path = local.control_plane_script_path
 
   kv_namespaces = [
@@ -75,7 +75,7 @@ module "control_plane_worker" {
   service_bindings = [
     {
       binding_name = "SLACK_BOT"
-      service_name = "open-inspect-slack-bot-${local.name_suffix}"
+      service_name = "CodInspect-slack-bot-${local.name_suffix}"
     }
   ]
 
@@ -133,7 +133,7 @@ module "slack_bot_worker" {
   source = "../../modules/cloudflare-worker"
 
   account_id  = var.cloudflare_account_id
-  worker_name = "open-inspect-slack-bot-${local.name_suffix}"
+  worker_name = "CodInspect-slack-bot-${local.name_suffix}"
   script_path = local.slack_bot_script_path
 
   kv_namespaces = [
@@ -146,7 +146,7 @@ module "slack_bot_worker" {
   service_bindings = [
     {
       binding_name = "CONTROL_PLANE"
-      service_name = "open-inspect-control-plane-${local.name_suffix}"
+      service_name = "CodInspect-control-plane-${local.name_suffix}"
     }
   ]
 
@@ -164,6 +164,7 @@ module "slack_bot_worker" {
     { name = "SLACK_BOT_TOKEN", value = var.slack_bot_token },
     { name = "SLACK_SIGNING_SECRET", value = var.slack_signing_secret },
     { name = "ANTHROPIC_API_KEY", value = var.anthropic_api_key },
+    { name = "GOOGLE_API_KEY", value = var.google_api_key },
     { name = "INTERNAL_CALLBACK_SECRET", value = var.internal_callback_secret },
   ]
 
@@ -180,13 +181,13 @@ module "slack_bot_worker" {
 module "web_app" {
   source = "../../modules/vercel-project"
 
-  project_name = "open-inspect-${local.name_suffix}"
+  project_name = "CodInspect-${local.name_suffix}"
   team_id      = var.vercel_team_id
   framework    = "nextjs"
 
   # No git_repository - deploy via CLI/CI instead of auto-deploy on push
   root_directory  = "packages/web"
-  install_command = "cd ../.. && npm install && npm run build -w @open-inspect/shared"
+  install_command = "cd ../.. && npm install && npm run build -w @CodInspect/shared"
   build_command   = "next build"
 
   environment_variables = [
@@ -278,19 +279,20 @@ module "modal_app" {
   modal_token_id     = var.modal_token_id
   modal_token_secret = var.modal_token_secret
 
-  app_name      = "open-inspect"
+  app_name      = "CodInspect"
   workspace     = var.modal_workspace
   deploy_path   = "${var.project_root}/packages/modal-infra"
   deploy_module = "deploy"
   source_hash   = data.external.modal_source_hash.result.hash
 
-  volume_name = "open-inspect-data"
+  volume_name = "CodInspect-data"
 
   secrets = [
     {
       name = "llm-api-keys"
       values = {
         ANTHROPIC_API_KEY = var.anthropic_api_key
+        GOOGLE_API_KEY    = var.google_api_key
       }
     },
     {

@@ -1,4 +1,4 @@
-"""Image definitions for Open-Inspect sandboxes."""
+"""Image definitions for CodInspect sandboxes."""
 
 from .base import OPENCODE_VERSION, base_image
 

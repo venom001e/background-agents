@@ -8,7 +8,13 @@
 /**
  * Valid model names supported by the system.
  */
-export const VALID_MODELS = ["claude-haiku-4-5", "claude-sonnet-4-5", "claude-opus-4-5"] as const;
+export const VALID_MODELS = [
+  "claude-haiku-4-5",
+  "claude-sonnet-4-5",
+  "claude-opus-4-5",
+  "gemini-2.0-flash",
+  "gemini-2.0-pro",
+] as const;
 
 export type ValidModel = (typeof VALID_MODELS)[number];
 
@@ -29,16 +35,22 @@ export function isValidModel(model: string): model is ValidModel {
  *
  * Models with "/" have embedded provider (kept for backward compatibility with existing sessions).
  * Models like "claude-haiku-4-5" use "anthropic" as default provider.
+ * Models like "gemini-..." use "google" as default provider.
  *
  * @example
  * extractProviderAndModel("claude-haiku-4-5") // { provider: "anthropic", model: "claude-haiku-4-5" }
- * extractProviderAndModel("anthropic/claude-3-opus") // { provider: "anthropic", model: "claude-3-opus" }
+ * extractProviderAndModel("gemini-2.0-flash") // { provider: "google", model: "gemini-2.0-flash" }
  */
 export function extractProviderAndModel(modelId: string): { provider: string; model: string } {
   if (modelId.includes("/")) {
     const [provider, ...modelParts] = modelId.split("/");
     return { provider, model: modelParts.join("/") };
   }
+
+  if (modelId.startsWith("gemini-")) {
+    return { provider: "google", model: modelId };
+  }
+
   return { provider: "anthropic", model: modelId };
 }
 

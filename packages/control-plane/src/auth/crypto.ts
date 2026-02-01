@@ -18,7 +18,8 @@ const IV_LENGTH = 12; // 96-bit IV for GCM
  * Import the encryption key from base64-encoded secret.
  */
 async function getEncryptionKey(keyBase64: string): Promise<CryptoKey> {
-  const keyData = Uint8Array.from(atob(keyBase64), (c) => c.charCodeAt(0));
+  const cleanKey = keyBase64.trim().replace(/^"|"$/g, "");
+  const keyData = new Uint8Array(Buffer.from(cleanKey, "base64"));
 
   return crypto.subtle.importKey("raw", keyData, { name: ALGORITHM, length: KEY_LENGTH }, false, [
     "encrypt",
@@ -57,7 +58,7 @@ export async function encryptToken(token: string, encryptionKey: string): Promis
  */
 export async function decryptToken(encrypted: string, encryptionKey: string): Promise<string> {
   const key = await getEncryptionKey(encryptionKey);
-  const combined = Uint8Array.from(atob(encrypted), (c) => c.charCodeAt(0));
+  const combined = new Uint8Array(Buffer.from(encrypted, "base64"));
 
   const iv = combined.slice(0, IV_LENGTH);
   const ciphertext = combined.slice(IV_LENGTH);

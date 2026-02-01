@@ -1097,7 +1097,7 @@ class AgentBridge:
 
 async def main():
     """Entry point for bridge process."""
-    parser = argparse.ArgumentParser(description="Open-Inspect Agent Bridge")
+    parser = argparse.ArgumentParser(description="CodInspect Agent Bridge")
     parser.add_argument("--sandbox-id", required=True, help="Sandbox ID")
     parser.add_argument("--session-id", required=True, help="Session ID for WebSocket connection")
     parser.add_argument("--control-plane", required=True, help="Control plane URL")

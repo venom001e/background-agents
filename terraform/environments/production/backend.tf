@@ -2,7 +2,7 @@
 # Uses Cloudflare R2 (S3-compatible storage)
 #
 # Prerequisites:
-# 1. Create R2 bucket: wrangler r2 bucket create open-inspect-terraform-state
+# 1. Create R2 bucket: wrangler r2 bucket create CodInspect-terraform-state
 # 2. Generate R2 API token with read/write permissions
 # 3. Initialize with:
 #    terraform init \
@@ -18,21 +18,7 @@
 # Then run: terraform init -backend-config=backend.tfvars
 
 terraform {
-  backend "s3" {
-    bucket = "open-inspect-terraform-state"
-    key    = "production/terraform.tfstate"
-    region = "auto"
-
-    # All sensitive/account-specific values passed via -backend-config
-    # endpoints = { s3 = "https://<ACCOUNT_ID>.r2.cloudflarestorage.com" }
-    # access_key = "..."
-    # secret_key = "..."
-
-    # Required for R2 compatibility
-    skip_credentials_validation = true
-    skip_metadata_api_check     = true
-    skip_region_validation      = true
-    skip_requesting_account_id  = true
-    skip_s3_checksum            = true
+  backend "local" {
+    path = "terraform.tfstate"
   }
 }

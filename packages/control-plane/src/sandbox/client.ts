@@ -5,10 +5,10 @@
  * All requests are authenticated using HMAC-signed tokens.
  */
 
-import { generateInternalToken } from "@open-inspect/shared";
+import { generateInternalToken } from "@CodInspect/shared";
 
 // Modal app name
-const MODAL_APP_NAME = "open-inspect";
+const MODAL_APP_NAME = "CodInspect";
 
 /**
  * Construct the Modal base URL from workspace name.

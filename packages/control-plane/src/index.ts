@@ -1,5 +1,5 @@
 /**
- * Open-Inspect Control Plane
+ * CodInspect Control Plane
  *
  * Cloudflare Workers entry point with Durable Objects for session management.
  */

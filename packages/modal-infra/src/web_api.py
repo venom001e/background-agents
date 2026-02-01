@@ -1,5 +1,5 @@
 """
-Web API endpoints for Open-Inspect Modal functions.
+Web API endpoints for CodInspect Modal functions.
 
 These endpoints expose Modal functions as HTTP APIs that can be called
 from the control plane (Cloudflare Workers).
@@ -229,7 +229,7 @@ async def api_warm_sandbox(
 @fastapi_endpoint(method="GET")
 def api_health() -> dict:
     """Health check endpoint. Does not require authentication."""
-    return {"success": True, "data": {"status": "healthy", "service": "open-inspect-modal"}}
+    return {"success": True, "data": {"status": "healthy", "service": "CodInspect-modal"}}
 
 
 @app.function(

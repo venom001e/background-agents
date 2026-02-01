@@ -1,5 +1,5 @@
 """
-Sandbox lifecycle management for Open-Inspect.
+Sandbox lifecycle management for CodInspect.
 
 This module handles:
 - Creating sandboxes from filesystem snapshots
@@ -58,7 +58,7 @@ class SandboxHandle:
 
 class SandboxManager:
     """
-    Manages sandbox lifecycle for Open-Inspect sessions.
+    Manages sandbox lifecycle for CodInspect sessions.
 
     Responsibilities:
     - Create sandboxes from snapshots or fresh images
@@ -116,7 +116,7 @@ class SandboxManager:
         # Determine image to use
         if config.snapshot_id:
             # Restore from snapshot
-            image = modal.Image.from_registry(f"open-inspect-snapshot:{config.snapshot_id}")
+            image = modal.Image.from_registry(f"CodInspect-snapshot:{config.snapshot_id}")
         else:
             # Use base image (would be repo-specific in production)
             image = base_image

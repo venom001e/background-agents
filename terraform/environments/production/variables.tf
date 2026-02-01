@@ -113,6 +113,13 @@ variable "anthropic_api_key" {
   sensitive   = true
 }
 
+variable "google_api_key" {
+  description = "Google AI API key for Gemini"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 # =============================================================================
 # Security Secrets
 # =============================================================================
@@ -146,7 +153,7 @@ variable "nextauth_secret" {
 # =============================================================================
 
 variable "deployment_name" {
-  description = "Unique deployment name used in URLs and resource names. Use something unique like your GitHub username or company name (e.g., 'acme', 'johndoe'). This will create URLs like: open-inspect-{deployment_name}.vercel.app"
+  description = "Unique deployment name used in URLs and resource names. Use something unique like your GitHub username or company name (e.g., 'acme', 'johndoe'). This will create URLs like: CodInspect-{deployment_name}.vercel.app"
   type        = string
 }
 

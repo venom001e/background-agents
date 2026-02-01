@@ -49,7 +49,7 @@ export async function createPullRequest(
       headers: {
         Accept: "application/vnd.github.v3+json",
         Authorization: `Bearer ${accessToken}`,
-        "User-Agent": "Open-Inspect",
+        "User-Agent": "CodInspect",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -99,7 +99,7 @@ export async function getPullRequestByHead(
       headers: {
         Accept: "application/vnd.github.v3+json",
         Authorization: `Bearer ${accessToken}`,
-        "User-Agent": "Open-Inspect",
+        "User-Agent": "CodInspect",
       },
     }
   );
@@ -143,7 +143,7 @@ export async function updatePullRequest(
     headers: {
       Accept: "application/vnd.github.v3+json",
       Authorization: `Bearer ${accessToken}`,
-      "User-Agent": "Open-Inspect",
+      "User-Agent": "CodInspect",
       "Content-Type": "application/json",
     },
     body: JSON.stringify(updates),
@@ -172,7 +172,7 @@ export async function addPRComment(
       headers: {
         Accept: "application/vnd.github.v3+json",
         Authorization: `Bearer ${accessToken}`,
-        "User-Agent": "Open-Inspect",
+        "User-Agent": "CodInspect",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ body }),
@@ -197,7 +197,7 @@ export async function getRepository(
     headers: {
       Accept: "application/vnd.github.v3+json",
       Authorization: `Bearer ${accessToken}`,
-      "User-Agent": "Open-Inspect",
+      "User-Agent": "CodInspect",
     },
   });
 
@@ -241,7 +241,7 @@ export async function listUserRepositories(
       headers: {
         Accept: "application/vnd.github.v3+json",
         Authorization: `Bearer ${accessToken}`,
-        "User-Agent": "Open-Inspect",
+        "User-Agent": "CodInspect",
       },
     }
   );

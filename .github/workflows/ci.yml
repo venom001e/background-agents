@@ -50,7 +50,7 @@ jobs:
         run: npm ci
 
       - name: Build shared package
-        run: npm run build -w @open-inspect/shared
+        run: npm run build -w @CodInspect/shared
 
       - name: TypeCheck all packages
         run: npm run typecheck
@@ -125,13 +125,13 @@ jobs:
         run: npm ci
 
       - name: Build shared package
-        run: npm run build -w @open-inspect/shared
+        run: npm run build -w @CodInspect/shared
 
       - name: Run control-plane tests
-        run: npm test -w @open-inspect/control-plane
+        run: npm test -w @CodInspect/control-plane
 
       - name: Run web tests
-        run: npm test -w @open-inspect/web
+        run: npm test -w @CodInspect/web
 
   test-python:
     name: Test (Python)

@@ -1,6 +1,6 @@
 # Terraform Infrastructure
 
-This directory contains Infrastructure as Code (IaC) for deploying the Open-Inspect system using
+This directory contains Infrastructure as Code (IaC) for deploying the CodInspect system using
 Terraform.
 
 ## Architecture Overview
@@ -55,7 +55,7 @@ brew install node@22
    - Permissions needed: Workers Scripts (Edit), Workers KV (Edit), Workers Routes (Edit)
 
 2. **Create R2 Bucket** for Terraform state:
-   - Bucket name: `open-inspect-terraform-state`
+   - Bucket name: `CodInspect-terraform-state`
    - Generate R2 API token with read/write permissions
 
 3. **Note your Account ID** (found in dashboard URL)
@@ -345,16 +345,16 @@ terraform output verification_commands
 # Or manually:
 
 # 1. Health check control plane
-curl https://open-inspect-control-plane-prod.<subdomain>.workers.dev/health
+curl https://CodInspect-control-plane-prod.<subdomain>.workers.dev/health
 
 # 2. Health check Modal (replace <workspace> with your Modal workspace)
-curl https://<workspace>--open-inspect-api-health.modal.run
+curl https://<workspace>--CodInspect-api-health.modal.run
 
 # 3. Verify Vercel deployment (replace with your Vercel app URL)
 curl https://<your-vercel-app>.vercel.app
 
 # 4. Test authenticated endpoint (should return 401)
-curl https://open-inspect-control-plane-prod.<subdomain>.workers.dev/sessions
+curl https://CodInspect-control-plane-prod.<subdomain>.workers.dev/sessions
 ```
 
 ## Troubleshooting
@@ -376,11 +376,11 @@ variables.
 
 1. Check Modal CLI is installed: `modal --version`
 2. Verify Modal credentials: `modal token show`
-3. Check logs: `modal app logs open-inspect`
+3. Check logs: `modal app logs CodInspect`
 
 ### Worker deployment fails
 
-1. Build workers first: `npm run build -w @open-inspect/control-plane`
+1. Build workers first: `npm run build -w @CodInspect/control-plane`
 2. Check script exists: `ls packages/control-plane/dist/index.js`
 3. Verify API token permissions
 

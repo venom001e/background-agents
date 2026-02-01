@@ -1,10 +1,11 @@
 {
-  "name": "@open-inspect/control-plane",
+  "name": "@codinspect/control-plane",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js --platform=browser --target=es2022 --external:cloudflare:* --external:node:*",
+    "dev": "wrangler dev src/index.ts --port 8787",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
@@ -12,7 +13,7 @@
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20241230.0",
-    "@open-inspect/shared": "file:../shared"
+    "@codinspect/shared": "file:../shared"
   },
   "devDependencies": {
     "esbuild": "^0.24.2",

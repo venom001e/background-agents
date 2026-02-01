@@ -1,12 +1,12 @@
-# Contributing to Open-Inspect
+# Contributing to CodInspect
 
-Thank you for your interest in contributing to Open-Inspect! This document provides guidelines for
+Thank you for your interest in contributing to CodInspect! This document provides guidelines for
 contributing to the project.
 
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR-USERNAME/open-inspect.git`
+2. Clone your fork: `git clone https://github.com/YOUR-USERNAME/CodInspect.git`
 3. Install dependencies: `npm install`
 4. Create a branch for your changes: `git checkout -b feature/your-feature-name`
 
@@ -21,7 +21,7 @@ For local development:
 npm install
 
 # Build shared package
-npm run build -w @open-inspect/shared
+npm run build -w @CodInspect/shared
 
 # Run type checking
 npm run typecheck

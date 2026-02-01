@@ -5,6 +5,7 @@ import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { SessionSidebar } from "./session-sidebar";
 import { useSidebar } from "@/hooks/use-sidebar";
+import { Github, Loader2, Sparkles } from "lucide-react";
 
 interface SidebarContextValue {
   isOpen: boolean;
@@ -35,8 +36,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   // Show loading state
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground" />
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0b]">
+        <Loader2 className="animate-spin h-8 w-8 text-accent" />
       </div>
     );
   }
@@ -44,24 +45,49 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   // Show sign-in page if not authenticated
   if (!session) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-8">
-        <h1 className="text-4xl font-bold text-foreground">Open-Inspect</h1>
-        <p className="text-muted-foreground max-w-md text-center">
-          Background coding agent for your team. Ship faster with AI-powered code changes.
-        </p>
-        <button
-          onClick={() => signIn("github")}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 font-medium hover:opacity-90 transition"
-        >
-          <GitHubIcon />
-          Sign in with GitHub
-        </button>
+      <div className="min-h-screen relative flex flex-col items-center justify-center bg-[#0a0a0b] overflow-hidden p-6">
+        {/* Reuse Mesh Background logic directly or via component if shared */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-accent/20 rounded-full blur-[120px] animate-mesh" />
+          <div className="absolute -bottom-[20%] -right-[10%] w-[50%] h-[50%] bg-accent/10 rounded-full blur-[100px] animate-mesh" style={{ animationDelay: "-5s" }} />
+        </div>
+
+        <div className="relative z-10 w-full max-w-lg space-y-12 text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-accent text-sm font-bold tracking-widest uppercase">
+              <Sparkles className="w-4 h-4" /> Next-Gen Build Agent
+            </div>
+            <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter leading-none">
+              Cod<span className="text-gradient">Inspect</span>
+            </h1>
+            <p className="text-muted-foreground text-xl font-medium max-w-sm mx-auto">
+              Automate your codebase evolution with autonomous AI agents.
+            </p>
+          </div>
+
+          <div className="glass rounded-[2.5rem] p-4 p-8 space-y-8 shadow-2xl border border-white/5">
+            <div className="space-y-2">
+              <h3 className="text-white font-bold text-lg">Initialize your workspace</h3>
+              <p className="text-muted-foreground text-sm">Securely connect with GitHub to get started.</p>
+            </div>
+            <button
+              onClick={() => signIn("github")}
+              className="group w-full flex items-center justify-center gap-4 bg-white text-black px-8 py-5 rounded-[1.5rem] font-bold text-lg hover:bg-accent hover:text-white transition-all duration-500 shadow-xl hover:shadow-accent/25 active:scale-95"
+            >
+              <Github className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
+              Sign in with GitHub
+            </button>
+            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.2em] font-black">
+              Zero-Configuration • Open Source • Enterprise Ready
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   const handleNewSession = () => {
-    router.push("/");
+    router.push("/dashboard");
   };
 
   return (
@@ -69,9 +95,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar with transition */}
         <div
-          className={`transition-all duration-200 ease-in-out ${
-            sidebar.isOpen ? "w-72" : "w-0"
-          } flex-shrink-0 overflow-hidden`}
+          className={`transition-all duration-200 ease-in-out ${sidebar.isOpen ? "w-72" : "w-0"
+            } flex-shrink-0 overflow-hidden`}
         >
           <SessionSidebar onNewSession={handleNewSession} onToggle={sidebar.toggle} />
         </div>

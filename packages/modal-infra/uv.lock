@@ -632,7 +632,7 @@ wheels = [
 ]
 
 [[package]]
-name = "open-inspect-modal"
+name = "CodInspect-modal"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

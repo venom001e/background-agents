@@ -1,5 +1,5 @@
 /**
- * API router for Open-Inspect Control Plane.
+ * API router for CodInspect Control Plane.
  */
 
 import type { Env, CreateSessionRequest, CreateSessionResponse } from "./types";
@@ -10,7 +10,7 @@ import type {
   EnrichedRepository,
   InstallationRepository,
   RepoMetadata,
-} from "@open-inspect/shared";
+} from "@CodInspect/shared";
 import { getRepoMetadataKey } from "./utils/repo";
 
 /**
@@ -172,7 +172,7 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: parsePattern("/health"),
-    handler: async () => json({ status: "healthy", service: "open-inspect-control-plane" }),
+    handler: async () => json({ status: "healthy", service: "CodInspect-control-plane" }),
   },
 
   // Session management
@@ -892,7 +892,7 @@ async function handleListRepos(
     repos = await listInstallationRepositories(appConfig);
   } catch (e) {
     console.error("Failed to list installation repositories:", e);
-    return error("Failed to fetch repositories from GitHub", 500);
+    return error(`Failed to fetch repositories from GitHub: ${e instanceof Error ? e.message : String(e)}`, 500);
   }
 
   // Enrich repos with stored metadata

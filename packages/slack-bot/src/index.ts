@@ -1,5 +1,5 @@
 /**
- * Open-Inspect Slack Bot Worker
+ * CodInspect Slack Bot Worker
  *
  * Cloudflare Worker that handles Slack events and provides
  * a natural language interface to the coding agent.
@@ -283,7 +283,7 @@ async function publishAppHome(env: Env, userId: string): Promise<void> {
         type: "section",
         text: {
           type: "mrkdwn",
-          text: "Configure your Open-Inspect preferences below.",
+          text: "Configure your CodInspect preferences below.",
         },
       },
       { type: "divider" },
@@ -445,7 +445,7 @@ app.get("/health", async (c) => {
 
   return c.json({
     status: "healthy",
-    service: "open-inspect-slack-bot",
+    service: "CodInspect-slack-bot",
     repoCount,
   });
 });

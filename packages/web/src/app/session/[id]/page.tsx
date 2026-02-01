@@ -101,9 +101,8 @@ function ModelOptionButton({
     <button
       type="button"
       onClick={onSelect}
-      className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted transition ${
-        isSelected ? "text-foreground" : "text-muted-foreground"
-      }`}
+      className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted transition ${isSelected ? "text-foreground" : "text-muted-foreground"
+        }`}
     >
       <div className="flex flex-col items-start">
         <span className="font-medium">{model.name}</span>
@@ -176,13 +175,6 @@ export default function SessionPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [events]);
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (authStatus === "unauthenticated") {
-      router.push("/");
-    }
-  }, [authStatus, router]);
-
   // Close model dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -220,14 +212,6 @@ export default function SessionPage() {
       sendTyping();
     }, 300);
   };
-
-  if (authStatus === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground" />
-      </div>
-    );
-  }
 
   return (
     <SidebarLayout>
@@ -508,9 +492,8 @@ function SessionContent({
                     {MODEL_OPTIONS.map((group, groupIdx) => (
                       <div key={group.category}>
                         <div
-                          className={`px-3 py-1.5 text-xs font-medium text-secondary-foreground uppercase tracking-wider ${
-                            groupIdx > 0 ? "border-t border-border-muted mt-1" : ""
-                          }`}
+                          className={`px-3 py-1.5 text-xs font-medium text-secondary-foreground uppercase tracking-wider ${groupIdx > 0 ? "border-t border-border-muted mt-1" : ""
+                            }`}
                         >
                           {group.category}
                         </div>

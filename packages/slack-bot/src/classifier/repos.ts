@@ -94,7 +94,7 @@ export async function getAvailableRepos(env: Env): Promise<RepoConfig[]> {
       response = await fetch(url, {
         headers: {
           ...headers,
-          "User-Agent": "open-inspect-slack-bot",
+          "User-Agent": "CodInspect-slack-bot",
         },
       });
     }

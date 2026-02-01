@@ -23,7 +23,7 @@ import {
   type IdGenerator,
 } from "../sandbox/lifecycle/manager";
 import { createPullRequest, getRepository } from "../auth/pr";
-import { generateBranchName } from "@open-inspect/shared";
+import { generateBranchName } from "@CodInspect/shared";
 import { DEFAULT_MODEL, isValidModel, extractProviderAndModel } from "../utils/models";
 import type {
   Env,
@@ -232,7 +232,7 @@ export class SessionDO extends DurableObject<Env> {
     // Build configuration
     const controlPlaneUrl =
       this.env.WORKER_URL ||
-      `https://open-inspect-control-plane.${this.env.CF_ACCOUNT_ID || "workers"}.workers.dev`;
+      `https://CodInspect-control-plane.${this.env.CF_ACCOUNT_ID || "workers"}.workers.dev`;
 
     const { provider: llmProvider, model } = extractProviderAndModel(DEFAULT_MODEL);
 
@@ -1909,7 +1909,7 @@ export class SessionDO extends DurableObject<Env> {
       // Append session link footer to agent's PR body
       const webAppUrl = this.env.WEB_APP_URL || this.env.WORKER_URL || "";
       const sessionUrl = `${webAppUrl}/session/${sessionId}`;
-      const fullBody = body.body + `\n\n---\n*Created with [Open-Inspect](${sessionUrl})*`;
+      const fullBody = body.body + `\n\n---\n*Created with [CodInspect](${sessionUrl})*`;
 
       // Create the PR using GitHub API (using the prompting user's token)
       const prResult = await createPullRequest(

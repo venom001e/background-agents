@@ -9,7 +9,7 @@
  * 3. Token valid for 1 hour
  */
 
-import type { InstallationRepository } from "@open-inspect/shared";
+import type { InstallationRepository } from "@CodInspect/shared";
 
 /**
  * Configuration for GitHub App authentication.
@@ -44,21 +44,22 @@ function base64UrlEncode(input: Uint8Array | string): string {
  * Parse PEM-encoded private key to raw bytes.
  */
 function parsePemPrivateKey(pem: string): Uint8Array {
-  // Remove PEM header/footer and newlines
+  // Remove PEM header/footer and all non-base64 characters
   const pemContents = pem
     .replace(/-----BEGIN RSA PRIVATE KEY-----/g, "")
     .replace(/-----END RSA PRIVATE KEY-----/g, "")
     .replace(/-----BEGIN PRIVATE KEY-----/g, "")
     .replace(/-----END PRIVATE KEY-----/g, "")
-    .replace(/\s/g, "");
+    .replace(/\\n/g, "")
+    .replace(/[^A-Za-z0-9+/=]/g, "");
 
-  // Decode base64
-  const binaryString = atob(pemContents);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+  try {
+    // Decode base64 using Buffer
+    return new Uint8Array(Buffer.from(pemContents, "base64"));
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Buffer failed: ${errorMsg}. pemContents length: ${pemContents.length}, start: ${pemContents.substring(0, 10)}, end: ${pemContents.substring(pemContents.length - 10)}`);
   }
-  return bytes;
 }
 
 /**
@@ -85,7 +86,7 @@ async function importPrivateKey(pem: string): Promise<CryptoKey> {
     // so we may need to convert or use a different approach
     throw new Error(
       "Unable to import private key. Ensure it is in PKCS#8 format. " +
-        "Convert with: openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in key.pem -out key-pkcs8.pem"
+      "Convert with: openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in key.pem -out key-pkcs8.pem"
     );
   }
 }
@@ -119,6 +120,7 @@ export async function generateAppJwt(appId: string, privateKey: string): Promise
   const signingInput = `${encodedHeader}.${encodedPayload}`;
 
   // Sign with RSA-SHA256
+  console.log(`[github-app] Generating JWT for appId: ${appId}, privateKey length: ${privateKey.length}`);
   const key = await importPrivateKey(privateKey);
   const signature = await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
@@ -147,7 +149,7 @@ export async function getInstallationToken(jwt: string, installationId: string):
       Authorization: `Bearer ${jwt}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "Open-Inspect",
+      "User-Agent": "CodInspect",
     },
   });
 
@@ -174,7 +176,7 @@ export async function generateInstallationToken(config: GitHubAppConfig): Promis
 }
 
 // Re-export from shared for backward compatibility
-export type { InstallationRepository } from "@open-inspect/shared";
+export type { InstallationRepository } from "@CodInspect/shared";
 
 /**
  * GitHub API response for installation repositories.
@@ -219,7 +221,7 @@ export async function listInstallationRepositories(
         Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "Open-Inspect",
+        "User-Agent": "CodInspect",
       },
     });
 

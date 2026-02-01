@@ -1,4 +1,4 @@
-"""Scheduled tasks for Open-Inspect."""
+"""Scheduled tasks for CodInspect."""
 
 # Import to register with app (uses lazy imports internally)
 from . import image_builder

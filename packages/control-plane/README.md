@@ -1,4 +1,4 @@
-# Open-Inspect Control Plane
+# CodInspect Control Plane
 
 Cloudflare Workers + Durable Objects control plane for session management and real-time streaming.
 

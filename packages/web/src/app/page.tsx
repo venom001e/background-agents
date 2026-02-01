@@ -1,537 +1,508 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { SidebarLayout, useSidebarContext } from "@/components/sidebar-layout";
-import { formatModelNameLower } from "@/lib/format";
+import { useEffect, useState, useRef } from "react";
+import {
+  ArrowRightIcon,
+  VideoIcon,
+  ZapIcon,
+  UsersIcon,
+  GitBranchIcon,
+  CodeIcon,
+  GithubIcon,
+  TerminalIcon,
+  CpuIcon,
+  CheckIcon,
+  GlobeIcon,
+  LockIcon
+} from "lucide-react";
 
-interface Repo {
-  id: number;
-  fullName: string;
-  owner: string;
-  name: string;
-  description: string | null;
-  private: boolean;
-}
+// --- Components for Animations ---
 
-interface ModelOption {
-  id: string;
-  name: string;
-  description: string;
-}
+function TypewriterTerminal() {
+  const [text, setText] = useState("");
+  const fullText = `> reading repository context...
+> planning implementation steps...
+> creating new database schema...
+> writing API endpoints...
+> running unit tests...
+> all tests passed.
+> creating pull request...`;
 
-const MODEL_OPTIONS: { category: string; models: ModelOption[] }[] = [
-  {
-    category: "Model",
-    models: [
-      { id: "claude-haiku-4-5", name: "claude haiku 4.5", description: "Fast and efficient" },
-      { id: "claude-sonnet-4-5", name: "claude sonnet 4.5", description: "Balanced performance" },
-      { id: "claude-opus-4-5", name: "claude opus 4.5", description: "Most capable" },
-    ],
-  },
-];
-
-export default function Home() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [repos, setRepos] = useState<Repo[]>([]);
-  const [loadingRepos, setLoadingRepos] = useState(false);
-  const [selectedRepo, setSelectedRepo] = useState<string>("");
-  const [selectedModel, setSelectedModel] = useState("claude-haiku-4-5");
-  const [prompt, setPrompt] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState("");
-  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
-  const [isCreatingSession, setIsCreatingSession] = useState(false);
-  const sessionCreationPromise = useRef<Promise<string | null> | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const pendingConfigRef = useRef<{ repo: string; model: string } | null>(null);
-
-  const fetchRepos = useCallback(async () => {
-    setLoadingRepos(true);
-    try {
-      const res = await fetch("/api/repos");
-      if (res.ok) {
-        const data = await res.json();
-        const repoList = data.repos || [];
-        setRepos(repoList);
-        if (repoList.length > 0) {
-          setSelectedRepo((current) => current || repoList[0].fullName);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch repos:", error);
-    } finally {
-      setLoadingRepos(false);
-    }
+  useEffect(() => {
+    let index = 0;
+    const interval = setInterval(() => {
+      setText(fullText.slice(0, index));
+      index++;
+      if (index > fullText.length) clearInterval(interval);
+    }, 50);
+    return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    if (session) {
-      fetchRepos();
-    }
-  }, [session, fetchRepos]);
-
-  useEffect(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    setPendingSessionId(null);
-    setIsCreatingSession(false);
-    sessionCreationPromise.current = null;
-    pendingConfigRef.current = null;
-  }, [selectedRepo, selectedModel]);
-
-  const createSessionForWarming = useCallback(async () => {
-    if (pendingSessionId) return pendingSessionId;
-    if (sessionCreationPromise.current) return sessionCreationPromise.current;
-    if (!selectedRepo) return null;
-
-    setIsCreatingSession(true);
-    const [owner, name] = selectedRepo.split("/");
-    const currentConfig = { repo: selectedRepo, model: selectedModel };
-    pendingConfigRef.current = currentConfig;
-
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    const promise = (async () => {
-      try {
-        const res = await fetch("/api/sessions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            repoOwner: owner,
-            repoName: name,
-            model: selectedModel,
-          }),
-          signal: abortController.signal,
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (
-            pendingConfigRef.current?.repo === currentConfig.repo &&
-            pendingConfigRef.current?.model === currentConfig.model
-          ) {
-            setPendingSessionId(data.sessionId);
-            return data.sessionId as string;
-          }
-          return null;
-        }
-        return null;
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") {
-          return null;
-        }
-        console.error("Failed to create session for warming:", error);
-        return null;
-      } finally {
-        if (abortControllerRef.current === abortController) {
-          setIsCreatingSession(false);
-          sessionCreationPromise.current = null;
-          abortControllerRef.current = null;
-        }
-      }
-    })();
-
-    sessionCreationPromise.current = promise;
-    return promise;
-  }, [selectedRepo, selectedModel, pendingSessionId]);
-
-  const handlePromptChange = (value: string) => {
-    const wasEmpty = prompt.length === 0;
-    setPrompt(value);
-    if (wasEmpty && value.length > 0 && !pendingSessionId && !isCreatingSession && selectedRepo) {
-      createSessionForWarming();
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prompt.trim()) return;
-    if (!selectedRepo) {
-      setError("Please select a repository");
-      return;
-    }
-
-    setCreating(true);
-    setError("");
-
-    try {
-      let sessionId = pendingSessionId;
-      if (!sessionId) {
-        sessionId = await createSessionForWarming();
-      }
-
-      if (!sessionId) {
-        setError("Failed to create session");
-        setCreating(false);
-        return;
-      }
-
-      const res = await fetch(`/api/sessions/${sessionId}/prompt`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: prompt,
-          model: selectedModel,
-        }),
-      });
-
-      if (res.ok) {
-        router.push(`/session/${sessionId}`);
-      } else {
-        const data = await res.json();
-        setError(data.error || "Failed to send prompt");
-        setCreating(false);
-      }
-    } catch (_error) {
-      setError("Failed to create session");
-      setCreating(false);
-    }
-  };
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground" />
-      </div>
-    );
-  }
-
   return (
-    <SidebarLayout>
-      <HomeContent
-        isAuthenticated={!!session}
-        repos={repos}
-        loadingRepos={loadingRepos}
-        selectedRepo={selectedRepo}
-        setSelectedRepo={setSelectedRepo}
-        selectedModel={selectedModel}
-        setSelectedModel={setSelectedModel}
-        prompt={prompt}
-        handlePromptChange={handlePromptChange}
-        creating={creating}
-        isCreatingSession={isCreatingSession}
-        error={error}
-        handleSubmit={handleSubmit}
-      />
-    </SidebarLayout>
-  );
-}
-
-function HomeContent({
-  isAuthenticated,
-  repos,
-  loadingRepos,
-  selectedRepo,
-  setSelectedRepo,
-  selectedModel,
-  setSelectedModel,
-  prompt,
-  handlePromptChange,
-  creating,
-  isCreatingSession,
-  error,
-  handleSubmit,
-}: {
-  isAuthenticated: boolean;
-  repos: Repo[];
-  loadingRepos: boolean;
-  selectedRepo: string;
-  setSelectedRepo: (value: string) => void;
-  selectedModel: string;
-  setSelectedModel: (value: string) => void;
-  prompt: string;
-  handlePromptChange: (value: string) => void;
-  creating: boolean;
-  isCreatingSession: boolean;
-  error: string;
-  handleSubmit: (e: React.FormEvent) => void;
-}) {
-  const { isOpen, toggle } = useSidebarContext();
-  const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
-  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
-  const repoDropdownRef = useRef<HTMLDivElement>(null);
-  const modelDropdownRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (repoDropdownRef.current && !repoDropdownRef.current.contains(event.target as Node)) {
-        setRepoDropdownOpen(false);
-      }
-      if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target as Node)) {
-        setModelDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
-  };
-
-  const selectedRepoObj = repos.find((r) => r.fullName === selectedRepo);
-  const displayRepoName = selectedRepoObj ? selectedRepoObj.name : "Select repo";
-
-  return (
-    <div className="h-full flex flex-col">
-      {/* Header with toggle when sidebar is closed */}
-      {!isOpen && (
-        <header className="border-b border-border-muted flex-shrink-0">
-          <div className="px-4 py-3">
-            <button
-              onClick={toggle}
-              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition"
-              title="Open sidebar"
-            >
-              <SidebarToggleIcon />
-            </button>
-          </div>
-        </header>
-      )}
-
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <div className="w-full max-w-2xl">
-          {/* Welcome text */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-semibold text-foreground mb-2">Welcome to Open-Inspect</h1>
-            {isAuthenticated ? (
-              <p className="text-muted-foreground">
-                Ask a question or describe what you want to build
-              </p>
-            ) : (
-              <p className="text-muted-foreground">Sign in to start a new session</p>
-            )}
-          </div>
-
-          {/* Input box - only show when authenticated */}
-          {isAuthenticated && (
-            <form onSubmit={handleSubmit}>
-              {error && (
-                <div className="mb-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-4 py-3 border border-red-200 dark:border-red-800 text-sm">
-                  {error}
-                </div>
-              )}
-
-              <div className="border border-border bg-input">
-                {/* Text input area */}
-                <div className="relative">
-                  <textarea
-                    ref={inputRef}
-                    value={prompt}
-                    onChange={(e) => handlePromptChange(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="What do you want to build?"
-                    disabled={creating}
-                    className="w-full resize-none bg-transparent px-4 pt-4 pb-12 focus:outline-none text-foreground placeholder:text-secondary-foreground disabled:opacity-50"
-                    rows={3}
-                  />
-                  {/* Submit button */}
-                  <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                    {isCreatingSession && (
-                      <span className="text-xs text-accent">Warming sandbox...</span>
-                    )}
-                    <button
-                      type="submit"
-                      disabled={!prompt.trim() || creating || !selectedRepo}
-                      className="p-2 text-secondary-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition"
-                      title="Send"
-                    >
-                      {creating ? (
-                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 10l7-7m0 0l7 7m-7-7v18"
-                          />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Footer row with repo and model selectors */}
-                <div className="flex items-center justify-between px-4 py-2 border-t border-border-muted">
-                  {/* Left side - Repo selector + Model selector */}
-                  <div className="flex items-center gap-4">
-                    {/* Repo selector */}
-                    <div className="relative" ref={repoDropdownRef}>
-                      <button
-                        type="button"
-                        onClick={() => !creating && setRepoDropdownOpen(!repoDropdownOpen)}
-                        disabled={creating || loadingRepos}
-                        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition"
-                      >
-                        <RepoIcon />
-                        <span>{loadingRepos ? "Loading..." : displayRepoName}</span>
-                        <ChevronIcon />
-                      </button>
-
-                      {repoDropdownOpen && repos.length > 0 && (
-                        <div className="absolute bottom-full left-0 mb-2 w-72 max-h-64 overflow-y-auto bg-background shadow-lg border border-border py-1 z-50">
-                          {repos.map((repo) => (
-                            <button
-                              key={repo.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedRepo(repo.fullName);
-                                setRepoDropdownOpen(false);
-                              }}
-                              className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted transition ${
-                                selectedRepo === repo.fullName
-                                  ? "text-foreground"
-                                  : "text-muted-foreground"
-                              }`}
-                            >
-                              <div className="flex flex-col items-start text-left">
-                                <span className="font-medium truncate max-w-[200px]">
-                                  {repo.name}
-                                </span>
-                                <span className="text-xs text-secondary-foreground truncate max-w-[200px]">
-                                  {repo.owner}
-                                  {repo.private && " • private"}
-                                </span>
-                              </div>
-                              {selectedRepo === repo.fullName && <CheckIcon />}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Model selector */}
-                    <div className="relative" ref={modelDropdownRef}>
-                      <button
-                        type="button"
-                        onClick={() => !creating && setModelDropdownOpen(!modelDropdownOpen)}
-                        disabled={creating}
-                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition"
-                      >
-                        <ModelIcon />
-                        <span>{formatModelNameLower(selectedModel)}</span>
-                      </button>
-
-                      {modelDropdownOpen && (
-                        <div className="absolute bottom-full left-0 mb-2 w-56 bg-background shadow-lg border border-border py-1 z-50">
-                          {MODEL_OPTIONS.map((group, groupIdx) => (
-                            <div key={group.category}>
-                              <div
-                                className={`px-3 py-1.5 text-xs font-medium text-secondary-foreground uppercase tracking-wider ${
-                                  groupIdx > 0 ? "border-t border-border-muted mt-1" : ""
-                                }`}
-                              >
-                                {group.category}
-                              </div>
-                              {group.models.map((model) => (
-                                <button
-                                  key={model.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedModel(model.id);
-                                    setModelDropdownOpen(false);
-                                  }}
-                                  className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted transition ${
-                                    selectedModel === model.id
-                                      ? "text-foreground"
-                                      : "text-muted-foreground"
-                                  }`}
-                                >
-                                  <div className="flex flex-col items-start">
-                                    <span className="font-medium">{model.name}</span>
-                                    <span className="text-xs text-secondary-foreground">
-                                      {model.description}
-                                    </span>
-                                  </div>
-                                  {selectedModel === model.id && <CheckIcon />}
-                                </button>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right side - Agent label */}
-                  <span className="text-sm text-muted-foreground">build agent</span>
-                </div>
-              </div>
-
-              {repos.length === 0 && !loadingRepos && (
-                <p className="mt-3 text-sm text-muted-foreground text-center">
-                  No repositories found. Make sure you have granted access to your repositories.
-                </p>
-              )}
-            </form>
-          )}
-        </div>
-      </div>
+    <div className="font-mono text-sm leading-relaxed whitespace-pre-line text-green-400">
+      {text}
+      <span className="animate-pulse inline-block w-2 h-4 bg-green-500 ml-1 align-middle"></span>
     </div>
   );
 }
 
-function SidebarToggleIcon() {
+function HeadlineTypewriter() {
+  const [text, setText] = useState("");
+  const fullText = "Hire an AI Engineer\nthat builds 24/7.";
+
+  useEffect(() => {
+    let index = 0;
+    const interval = setInterval(() => {
+      setText(fullText.slice(0, index));
+      index++;
+      if (index > fullText.length + 1) clearInterval(interval);
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  const parts = text.split('\n');
+  const line1 = parts[0] || "";
+  const line2 = parts[1];
+
   return (
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <line x1="9" y1="3" x2="9" y2="21" />
-    </svg>
+    <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-8 leading-relaxed min-h-[120px] md:min-h-[160px] text-white" style={{ fontFamily: "'Press Start 2P', cursive", lineHeight: "1.5" }}>
+      {line1}
+      {line2 !== undefined && <br />}
+      <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-300 via-emerald-400 to-green-500 animate-gradient-x">
+        {line2}
+      </span>
+      <span className="inline-block w-4 h-8 md:h-12 bg-green-500 ml-2 animate-pulse align-middle" />
+    </h1>
   );
 }
 
-function RepoIcon() {
-  return (
-    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-      <path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z" />
-    </svg>
-  );
-}
+// --- Main Page ---
 
-function ModelIcon() {
-  return (
-    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-    </svg>
-  );
-}
+export default function LandingPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const isDark = true; // Forcing dark mode as per original design preference
 
-function ChevronIcon() {
-  return (
-    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  );
-}
+  useEffect(() => {
+    setMounted(true);
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-function CheckIcon() {
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      router.push("/dashboard");
+    }
+  }, [status, session, router]);
+
+  if (status === "loading" || !mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500" />
+      </div>
+    );
+  }
+
+  if (status === "authenticated") return null;
+
   return (
-    <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-    </svg>
+    <div className="min-h-screen selection:bg-green-500/30 font-sans bg-black text-white relative isolate">
+      {/* Graph Paper Background Effect */}
+      <div className="fixed inset-0 z-[-1] bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] mask-image-[radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+
+      {/* Navbar - Floating Glass */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
+        ? "bg-black/80 backdrop-blur-md border-b border-white/5 py-4"
+        : "py-6"
+        }`}>
+        <div className="max-w-6xl mx-auto px-4 md:px-8 flex items-center justify-between">
+          <div className="flex items-center gap-2 group cursor-pointer">
+            <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-lg flex items-center justify-center shadow-lg shadow-green-500/20 group-hover:rotate-12 transition-transform">
+              <CodeIcon className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+              CODINSPECT
+            </span>
+          </div>
+
+          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
+            {['Home', 'Features', 'How it works', 'Security'].map((item) => (
+              <a key={item} href={`#${item.toLowerCase().replace(/ /g, '-')}`} className="relative transition-colors group hover:text-white">
+                {item}
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 group-hover:w-full transition-all duration-300"></span>
+              </a>
+            ))}
+          </div>
+
+          <button
+            onClick={() => signIn("github")}
+            className="group relative px-6 py-2 rounded-full overflow-hidden transition-all border bg-white/10 hover:bg-white/20 border-white/5"
+          >
+            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+            <span className="relative flex items-center gap-2 text-sm font-semibold">
+              <GithubIcon className="w-4 h-4" /> Sign In
+            </span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section id="home" className="relative pt-40 pb-20 px-4 flex justify-center overflow-hidden">
+        {/* Ambient Glows */}
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-green-500/20 blur-[120px] rounded-full pointer-events-none opacity-50 mix-blend-screen" />
+
+        <div className="relative z-10 max-w-6xl w-full">
+          <div className="rounded-[2.5rem] border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl overflow-hidden relative group">
+            {/* Card Glow */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+
+            <div className="grid lg:grid-cols-2 gap-0 relative">
+              {/* Left: Content */}
+              <div className="p-10 md:p-16 flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-white/5 relative bg-gradient-to-b from-white/5 to-transparent">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-green-500/20 bg-green-500/5 text-green-400 text-xs font-mono mb-8 w-fit shadow-[0_0_20px_rgba(34,197,94,0.1)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
+                  V2.0 NOW LIVE
+                </div>
+
+                <HeadlineTypewriter />
+
+                <p className="text-lg mb-10 leading-relaxed text-gray-400 max-w-md">
+                  Hire an autonomous engineer that lives in your repo. CODINSPECT plans architecture, writes clean code, fixes bugs, and runs tests—all without supervision.
+                </p>
+
+                <div className="flex flex-wrap gap-4">
+                  <button
+                    onClick={() => signIn("github")}
+                    className="px-8 py-3.5 rounded-xl bg-white text-black font-bold text-base hover:scale-105 transition-all duration-300 flex items-center gap-2 shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:shadow-[0_0_40px_rgba(255,255,255,0.4)]"
+                  >
+                    <GithubIcon className="w-5 h-5" /> Hire Agent
+                  </button>
+                  <button className="px-8 py-3.5 rounded-xl border border-white/10 bg-white/5 text-white font-medium hover:bg-white/10 transition-all flex items-center gap-2 backdrop-blur-md">
+                    <VideoIcon className="w-5 h-5 opacity-70" /> Watch Demo
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: Terminal Visual */}
+              <div className="relative bg-[#050505] min-h-[400px] flex flex-col">
+                {/* Terminal Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/[0.02]">
+                  <div className="flex gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
+                    <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
+                    <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
+                  </div>
+                  <div className="text-[10px] font-mono text-gray-500 flex items-center gap-1">
+                    <LockIcon className="w-3 h-3" />
+                    ssh root@codinspect-agent
+                  </div>
+                </div>
+
+                {/* Terminal Body */}
+                <div className="flex-1 p-8 font-mono text-sm relative overflow-hidden">
+                  {/* Matrix Rain / Grid Effect */}
+                  <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'linear-gradient(0deg, transparent 24%, #22c55e 25%, #22c55e 26%, transparent 27%, transparent 74%, #22c55e 75%, #22c55e 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, #22c55e 25%, #22c55e 26%, transparent 27%, transparent 74%, #22c55e 75%, #22c55e 76%, transparent 77%, transparent)', backgroundSize: '50px 50px' }}></div>
+
+                  <div className="relative z-10 space-y-2">
+                    <div className="flex gap-2 text-gray-500">
+                      <span>$</span>
+                      <span className="text-white">codinspect init --repo=my-project</span>
+                    </div>
+                    <div className="text-green-500/50 italic mb-4">Initializing autonomous agent environment...</div>
+                    <TypewriterTerminal />
+                  </div>
+
+                  {/* Floating Stats */}
+                  <div className="absolute bottom-6 right-6 flex items-center gap-4">
+                    <div className="px-3 py-1 rounded bg-green-500/10 border border-green-500/20 text-[10px] text-green-400 font-mono animate-pulse">
+                      CPU: 12%
+                    </div>
+                    <div className="px-3 py-1 rounded bg-green-500/10 border border-green-500/20 text-[10px] text-green-400 font-mono">
+                      RAM: 2.1GB
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+
+      {/* Features Section (Bento Grid) */}
+      <section id="features" className="py-32 px-4 relative overflow-hidden">
+        <div className="absolute top-1/4 left-0 w-full h-[500px] bg-green-500/5 blur-[120px] -skew-y-6 pointer-events-none" />
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-24 flex flex-col md:flex-row items-end justify-between gap-8 border-b border-white/5 pb-12">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-mono mb-6 border-green-500/30 bg-green-500/10 text-green-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> CAPABILITIES
+              </div>
+              <h2 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight text-white">
+                More than just <br /> autocomplete.
+              </h2>
+            </div>
+            <p className="text-xl max-w-sm leading-relaxed text-gray-400">
+              A fully autonomous agent capable of complex reasoning and engineering.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* 1. Deep Reasoning Engine */}
+            <div className="col-span-1 lg:col-span-12 relative overflow-hidden rounded-[2rem] border group transition-all duration-500 bg-white/5 border-white/10 hover:border-green-500/30">
+              <div className="absolute inset-0 bg-green-500/5 group-hover:bg-green-500/10 transition-colors duration-500" />
+              <div className="p-8 md:p-16 relative z-10 flex flex-col md:flex-row gap-16 items-center">
+                <div className="flex-1 space-y-8">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/30 group-hover:scale-110 transition-transform duration-500">
+                    <CpuIcon className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-4xl font-bold text-white">Deep Reasoning Engine</h3>
+                  <p className="text-xl leading-relaxed text-gray-400">
+                    CODINSPECT doesn't just guess code. It reads your entire repo, understands dependencies, plans architecture, and implements features like a senior developer.
+                  </p>
+                </div>
+                {/* Visualizer: Neural Graph/Scanning */}
+                <div className="flex-1 w-full aspect-video rounded-2xl border relative overflow-hidden backdrop-blur-sm bg-[#050505] border-white/10 flex items-center justify-center group-hover:border-green-500/30 transition-colors">
+                  {/* Grid Background */}
+                  <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#22c55e 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+
+                  {/* Animated Radar/Scan Effect */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-green-500/5 via-transparent to-transparent animate-pulse"></div>
+
+                  {/* Central Node */}
+                  <div className="relative z-10 w-24 h-24 rounded-full bg-green-500/10 border border-green-500/50 flex items-center justify-center backdrop-blur-md shadow-[0_0_30px_rgba(34,197,94,0.2)]">
+                    <div className="absolute inset-0 rounded-full border border-green-500/30 animate-[spin_10s_linear_infinite]"></div>
+                    <div className="absolute inset-2 rounded-full border border-green-500/30 animate-[spin_15s_linear_infinite_reverse]"></div>
+                    <CpuIcon className="w-8 h-8 text-green-400 animate-pulse" />
+                  </div>
+
+                  {/* Satellite Nodes */}
+                  <div className="absolute top-1/4 left-1/4 p-2 rounded-lg bg-gray-900 border border-green-500/30 text-green-500 text-xs font-mono animate-bounce-slow shadow-lg">
+                    AST_Node
+                  </div>
+                  <div className="absolute bottom-1/3 right-1/4 p-2 rounded-lg bg-gray-900 border border-green-500/30 text-green-500 text-xs font-mono animate-bounce-slow animation-delay-2000 shadow-lg">
+                    Dependency_Map
+                  </div>
+
+                  {/* Mini Terminal */}
+                  <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-64 p-3 rounded bg-black/80 border border-white/10 font-mono text-[10px] text-green-500/70 overflow-hidden shadow-lg backdrop-blur-sm">
+                    <div className="flex flex-col gap-1">
+                      <span className="opacity-50">&gt; init_semantic_graph()</span>
+                      <span className="opacity-75">&gt; parsing directory tree...</span>
+                      <span className="animate-pulse text-green-400">&gt; optimizing execution plan_</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Multiplayer */}
+            <div className="col-span-1 lg:col-span-6 relative overflow-hidden rounded-[2rem] border p-10 md:p-12 group hover:-translate-y-1 transition-all duration-300 bg-white/5 border-white/10 hover:border-blue-500/30">
+              <div className="w-16 h-16 rounded-2xl bg-blue-500/20 flex items-center justify-center mb-8 text-blue-500 group-hover:scale-110 transition-transform">
+                <UsersIcon className="w-8 h-8" />
+              </div>
+              <h3 className="text-3xl font-bold mb-4 text-white">Multiplayer</h3>
+              <p className="text-xl mb-10 leading-relaxed text-gray-400">
+                Real-time collaboration with your AI agents and team. Watch code generation live.
+              </p>
+            </div>
+
+            {/* 3. Git Native */}
+            <div className="col-span-1 lg:col-span-6 relative overflow-hidden rounded-[2rem] border p-10 md:p-12 group hover:-translate-y-1 transition-all duration-300 bg-white/5 border-white/10 hover:border-purple-500/30">
+              <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mb-8 text-purple-500 group-hover:scale-110 transition-transform">
+                <GitBranchIcon className="w-8 h-8" />
+              </div>
+              <h3 className="text-3xl font-bold mb-4 text-white">Git Native</h3>
+              <p className="text-xl mb-10 leading-relaxed text-gray-400">
+                Automated PRs, clean commits, and branch management. Works with your existing workflow.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section id="how-it-works" className="py-32 px-4 bg-white/[0.02]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-20">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white">How CODINSPECT Works</h2>
+            <p className="text-lg text-gray-400">From issue to pull request in minutes.</p>
+          </div>
+          <div className="space-y-24 relative">
+            <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-0.5 bg-white/10" />
+            {[
+              { title: "1. Connect", desc: "Install the GitHub App. CODINSPECT indexes your codebase in <5 minutes.", icon: <GithubIcon /> },
+              { title: "2. Analyze", desc: "Our engine maps dependencies and understands your architecture.", icon: <CpuIcon /> },
+              { title: "3. Solve", desc: "Describe a bug or feature. Currently solving issues with 94% success rate.", icon: <CheckIcon /> }
+            ].map((step, i) => (
+              <div key={i} className={`relative flex flex-col md:flex-row gap-8 items-center ${i % 2 === 0 ? 'md:flex-row-reverse' : ''}`}>
+                <div className="flex-1 w-full md:w-1/2" />
+                <div className="relative z-10 w-16 h-16 rounded-2xl flex items-center justify-center border-4 bg-black border-green-500/20 text-green-500 shadow-[0_0_20px_rgba(34,197,94,0.2)]">
+                  {step.icon}
+                </div>
+                <div className="flex-1 w-full md:w-1/2 text-center md:text-left">
+                  <div className="p-8 rounded-3xl border transition-all hover:-translate-y-1 bg-white/5 border-white/10">
+                    <h3 className="text-2xl font-bold mb-4 text-white">{step.title}</h3>
+                    <p className="text-gray-400">{step.desc}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Security Section (Updated with 'Holographic Forcefield' Design) */}
+      <section id="security" className="py-24 px-4 overflow-hidden relative">
+        <div className="max-w-7xl mx-auto rounded-[3rem] p-12 md:p-24 relative overflow-hidden border bg-gradient-to-br from-green-900/10 to-transparent border-green-500/20">
+          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-green-500/10 rounded-full blur-[100px] pointer-events-none" />
+          <div className="grid md:grid-cols-2 gap-16 items-center relative z-10">
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 text-green-500 font-mono text-sm border border-green-500/20 mb-8">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> SOC2 COMPLIANT
+              </div>
+              <h2 className="text-4xl md:text-6xl font-bold mb-6 text-white">Enterprise Grade Security</h2>
+              <p className="text-xl mb-10 text-gray-400">
+                Your code never trains our models. We run ephemeral, isolated sandboxes for every task.
+              </p>
+              <button className="px-8 py-4 rounded-full border font-semibold hover:scale-105 transition-transform border-white/20 hover:bg-white/10 text-white">
+                Read Security Whitepaper
+              </button>
+            </div>
+
+            {/* Visualizer: Holographic Forcefield */}
+            <div className="relative">
+              <div className="w-full aspect-square rounded-3xl overflow-hidden bg-[#050505] border border-white/10 group relative flex items-center justify-center hover:border-green-500/30 transition-colors duration-500">
+                {/* Grid Floor */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+
+                {/* Central Safe Zone */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {/* Ripples */}
+                  <div className="absolute w-[300px] h-[300px] bg-green-500/5 rounded-full animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+                  <div className="absolute w-[200px] h-[200px] bg-green-500/5 rounded-full animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite] animation-delay-1000"></div>
+
+                  {/* Shield Container */}
+                  <div className="relative z-10 w-32 h-32 bg-gradient-to-br from-green-500/10 to-black rounded-2xl border border-green-500/30 backdrop-blur-xl flex items-center justify-center shadow-[0_0_60px_rgba(34,197,94,0.15)] group-hover:shadow-[0_0_100px_rgba(34,197,94,0.4)] transition-all duration-500 group-hover:scale-110 group-hover:border-green-500/60">
+                    <LockIcon className="w-12 h-12 text-green-400 drop-shadow-[0_0_15px_rgba(34,197,94,0.8)]" />
+
+                    {/* Corner Accents - Technical Look */}
+                    <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-green-500/50 -translate-x-1 -translate-y-1"></div>
+                    <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-green-500/50 translate-x-1 -translate-y-1"></div>
+                    <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-green-500/50 -translate-x-1 translate-y-1"></div>
+                    <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-green-500/50 translate-x-1 translate-y-1"></div>
+                  </div>
+                </div>
+
+                {/* Status Indicator */}
+                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 px-4 py-2 bg-green-900/20 border border-green-500/20 rounded-full flex items-center gap-2 backdrop-blur-md">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_rgba(34,197,94,1)]"></div>
+                  <span className="text-xs font-mono text-green-400 tracking-wider">SANDBOX_ACTIVE</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section (Legacy Marquee) */}
+      <section className="py-24 border-y border-white/5 overflow-hidden bg-black/50">
+        <div className="max-w-6xl mx-auto px-4 mb-16 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-mono mb-6 border-green-500/30 bg-green-500/10 text-green-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> TESTIMONIALS
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4 text-white">Loved by engineering teams</h2>
+          <p className="text-lg text-gray-400">Hear what founders and developers say about CODINSPECT.</p>
+        </div>
+        <div className="relative w-full max-w-7xl mx-auto overflow-hidden group">
+          <div className="absolute left-0 top-0 h-full w-20 z-10 pointer-events-none bg-gradient-to-r from-black to-transparent" />
+          <div className="absolute right-0 top-0 h-full w-20 z-10 pointer-events-none bg-gradient-to-l from-black to-transparent" />
+          <div className="flex animate-marquee gap-6 min-w-[200%]">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="flex gap-6 shrink-0">
+                {[
+                  { name: "Briar Martin", handle: "@neilstellar", img: "https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200", text: "CODINSPECT helped us ship our auth system in days instead of weeks." },
+                  { name: "Avery Johnson", handle: "@averywrites", img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200", text: "I was skeptical about AI engineers, but this agent actually understands our monorepo." },
+                  { name: "Jordan Lee", handle: "@jordantalks", img: "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=200&auto=format&fit=crop&q=60", text: "It fixed a critical bug while I was asleep. Woke up to a green build." },
+                  { name: "Sarah Chen", handle: "@schen_dev", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&auto=format&fit=crop&q=60", text: "The deep reasoning engine is legit. Caught a race condition we missed." }
+                ].map((card, idx) => (
+                  <div key={idx} className="p-6 rounded-2xl w-80 shrink-0 border transition-all bg-white/5 border-white/10 hover:bg-white/10">
+                    <div className="flex gap-3 mb-4">
+                      <img className="w-10 h-10 rounded-full object-cover" src={card.img} alt={card.name} />
+                      <div>
+                        <div className="flex items-center gap-1">
+                          <h4 className="text-sm font-bold text-white">{card.name}</h4>
+                          <span className="text-green-500 text-[10px]">✓</span>
+                        </div>
+                        <p className="text-xs text-gray-500">{card.handle}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm leading-relaxed text-gray-300">"{card.text}"</p>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-20 border-t border-white/5 bg-black/50 backdrop-blur-lg">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <h2 className="text-5xl md:text-8xl font-bold text-transparent bg-clip-text tracking-tighter mb-8 bg-gradient-to-b from-white/20 to-transparent">
+            CODINSPECT
+          </h2>
+          <div className="flex justify-center gap-8 text-sm text-gray-500">
+            <a href="#" className="transition hover:text-white">Twitter</a>
+            <a href="#" className="transition hover:text-white">GitHub</a>
+            <a href="#" className="transition hover:text-white">Discord</a>
+          </div>
+        </div>
+      </footer>
+
+      {/* Global Styles */}
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          animation: marquee 30s linear infinite;
+        }
+         @keyframes shimmer {
+          100% { transform: translateX(100%); }
+        }
+        .animate-shimmer {
+           animation: shimmer 2s infinite;
+        }
+        @keyframes gradient-x {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        .animate-gradient-x {
+          background-size: 200% 200%;
+          animation: gradient-x 5s ease infinite;
+        }
+        .animation-delay-1000 {
+            animation-delay: 1s;
+        }
+        .animation-delay-2000 {
+            animation-delay: 2s;
+        }
+        .animate-bounce-slow {
+            animation: bounce 3s infinite;
+        }
+      `}</style>
+    </div>
   );
 }

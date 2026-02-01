@@ -1,1 +1,1 @@
-"""Tests for Open-Inspect Modal infrastructure."""
+"""Tests for CodInspect Modal infrastructure."""

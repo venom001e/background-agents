@@ -1,11 +1,11 @@
-# Open-Inspect
+# CodInspect
 
 An open-source background coding agent system inspired by
 [Ramp's Inspect](https://builders.ramp.com/post/why-we-built-our-background-agent).
 
 ## Overview
 
-Open-Inspect provides a hosted coding agent that can:
+CodInspect provides a hosted coding agent that can:
 
 - Work on tasks in the background while you focus on other things
 - Access full development environments with all tools engineers have

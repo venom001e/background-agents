@@ -1,6 +1,6 @@
-# Open-Inspect Web Client
+# CodInspect Web Client
 
-Next.js web application for interacting with Open-Inspect coding sessions.
+Next.js web application for interacting with CodInspect coding sessions.
 
 ## Features
 
